@@ -19,8 +19,6 @@ import org.androidannotations.annotations.Click;
 import org.androidannotations.annotations.EFragment;
 import org.androidannotations.annotations.ViewById;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 import ru.mew_hpm.sshfilemanager.R;
@@ -32,10 +30,15 @@ import ru.mew_hpm.sshfilemanager.dao.SSHCommandEventListener;
 import ru.mew_hpm.sshfilemanager.dao.SSHLs;
 import ru.mew_hpm.sshfilemanager.dao.SSHLsEventListener;
 import ru.mew_hpm.sshfilemanager.dao.SSHServerData;
+import ru.mew_hpm.sshfilemanager.dao.TaskCommand;
+import ru.mew_hpm.sshfilemanager.dao.TaskCommandEventListener;
 import ru.mew_hpm.sshfilemanager.ssh.MountHelper;
 import ru.mew_hpm.sshfilemanager.ssh.MountHelperEventListener;
 import ru.mew_hpm.sshfilemanager.ssh.SSHHelper;
 import ru.mew_hpm.sshfilemanager.ssh.SSHHelperEventListener;
+import ru.mew_hpm.sshfilemanager.tools.AppUtils;
+import ru.mew_hpm.sshfilemanager.ui.adapters.BackgroundCopyTasksAdapter;
+import ru.mew_hpm.sshfilemanager.ui.adapters.BackgroundCopyTasksAdapterActionListener;
 import ru.mew_hpm.sshfilemanager.ui.adapters.FileManagerAdapter;
 import ru.mew_hpm.sshfilemanager.ui.adapters.FileManagerAdapterActionListener;
 import ru.mew_hpm.sshfilemanager.ui.adapters.MountPointsAdapter;
@@ -60,6 +63,9 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
 
     private MountPointsAdapter
             mountPointsAdapter;
+
+    private BackgroundCopyTasksAdapter
+            bgCopyTasksAdapter;
 
     private RemoteFile
             selectedFile = null;
@@ -92,10 +98,26 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
     ListView fmListMPAvaible;
 
     @ViewById
+    ListView fmListBgTasks;
+
+    @ViewById
     TabHost fmTabs;
 
     @ViewById
     FloatingActionButton floatingMenuButton;
+
+    // TODO: Add waiter for mount, tasks.
+    // TODO: Add disk capacity info in the mount page.
+    // TODO: Add remember last session folders.
+
+    private void refreshTasks() {
+        ssh.getBgCopyTasks(new TaskCommand(new TaskCommandEventListener() {
+            @Override
+            public void OnTaskResult(ArrayList<BackgroundCopyTask> list, TaskCommand tc) {
+                bgCopyTasksAdapter.refresh(list);
+            }
+        }));
+    }
 
     @AfterViews
     void initThis() {
@@ -141,6 +163,10 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
                         case "tab3":
                             selectedTab = 2;
                             mountHelper.lsMount();
+                            floatingMenuButton.hide();
+                            break;
+                        case "tab4":
+                            refreshTasks();
                             floatingMenuButton.hide();
                             break;
                     }
@@ -228,6 +254,43 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
         });
         fmListMPAvaible.setAdapter(mountPointsAdapter);
 
+        bgCopyTasksAdapter = new BackgroundCopyTasksAdapter(this.getActivity(), new BackgroundCopyTasksAdapterActionListener() {
+            @Override
+            public void OnLongClick(final BackgroundCopyTask item) {
+                MountListDialog.show("Tasks menu", THIS.getContext(),
+                        new MountListDialogItem("Delete task", new MountListDialogItemActionListener() {
+                            @Override
+                            public void OnDialogItemClick(MountListDialogItem di) {
+                                final SSHCommand cpCmd = new SSHCommand(
+                                        "rm -f /tmp/sshfm/*" + item.getTaskName() + "*", new SSHCommandEventListener() {
+                                    @Override
+                                    public void OnCmdExecResult(SSHCommand cmd) {
+                                        refreshTasks();
+                                    }
+                                });
+                                ssh.exec(cpCmd);
+                            }
+                        }),
+                        new MountListDialogItem("Delete all", new MountListDialogItemActionListener() {
+                            @Override
+                            public void OnDialogItemClick(MountListDialogItem di) {
+                                final SSHCommand cpCmd = new SSHCommand("rm -f /tmp/sshfm/*", new SSHCommandEventListener() {
+                                    @Override
+                                    public void OnCmdExecResult(SSHCommand cmd) {
+                                        refreshTasks();
+                                    }
+                                });
+                                ssh.exec(cpCmd);
+                            }
+                        })
+                );
+            }
+
+            @Override
+            public void OnClick(BackgroundCopyTask item) {}
+        });
+        fmListBgTasks.setAdapter(bgCopyTasksAdapter);
+
         floatingMenuButton.setImageDrawable(new IconicsDrawable(this.getContext()).icon(GoogleMaterial.Icon.gmd_menu).colorRes(R.color.colorFloatIcon).sizeDp(48));
     }
 
@@ -294,7 +357,7 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
                 actionListener.OnWaitStart();
                 break;
             case BG_COPY:
-                final BackgroundCopyTask bgTask = new BackgroundCopyTask(selectedFileDirectory+"/"+selectedFile.getShortName(), pwd, md5(selectedFile.getShortName() + selectedFile.getSize()));
+                final BackgroundCopyTask bgTask = new BackgroundCopyTask(selectedFileDirectory+"/"+selectedFile.getShortName(), pwd, AppUtils.md5(selectedFile.getShortName() + selectedFile.getSize()));
                 bgTask.setFileShortName(selectedFile.getShortName());
                 ssh.backgroundCopy(bgTask);
                 break;
@@ -441,26 +504,5 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
     public void OnUmountComplete(MountPoint mp) {
         actionListener.OnWaitEnd();
         mountHelper.lsMount();
-    }
-
-    public static final String md5(final String s) {
-        final String MD5 = "MD5";
-        try {
-            MessageDigest digest = java.security.MessageDigest.getInstance(MD5);
-            digest.update(s.getBytes());
-            byte messageDigest[] = digest.digest();
-
-            StringBuilder hexString = new StringBuilder();
-            for (byte aMessageDigest : messageDigest) {
-                String h = Integer.toHexString(0xFF & aMessageDigest);
-                while (h.length() < 2)
-                    h = "0" + h;
-                hexString.append(h);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        return "";
     }
 }

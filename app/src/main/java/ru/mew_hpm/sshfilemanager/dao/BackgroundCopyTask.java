@@ -1,11 +1,15 @@
 package ru.mew_hpm.sshfilemanager.dao;
 
-public class BackgroundCopyTask {
+import java.io.Serializable;
+
+public class BackgroundCopyTask implements Serializable {
     private String copyFrom;
     private String copyTo;
     private String taskName;
     private String fileShortName;
     private String extra;
+    private boolean completed;
+    private long startTime;
 
     public BackgroundCopyTask() {}
 
@@ -13,6 +17,8 @@ public class BackgroundCopyTask {
         copyFrom = from;
         copyTo = to;
         taskName = name;
+        completed = false;
+        startTime = System.currentTimeMillis();
     }
 
     public String getCopyFrom() {
@@ -53,5 +59,21 @@ public class BackgroundCopyTask {
 
     public void setFileShortName(String fileShortName) {
         this.fileShortName = fileShortName;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(long startTime) {
+        this.startTime = startTime;
     }
 }

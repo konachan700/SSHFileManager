@@ -5,6 +5,8 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
@@ -14,6 +16,7 @@ import com.jcraft.jsch.SftpException;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -27,11 +30,14 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import ru.mew_hpm.sshfilemanager.R;
 import ru.mew_hpm.sshfilemanager.dao.BackgroundCopyTask;
 import ru.mew_hpm.sshfilemanager.dao.RemoteFile;
 import ru.mew_hpm.sshfilemanager.dao.SSHCommand;
 import ru.mew_hpm.sshfilemanager.dao.SSHCommandEventListener;
 import ru.mew_hpm.sshfilemanager.dao.SSHLs;
+import ru.mew_hpm.sshfilemanager.dao.TaskCommand;
+import ru.mew_hpm.sshfilemanager.tools.AppUtils;
 
 public class SSHHelper extends AsyncTask {
     private static final Map<String, SSHHelper>
@@ -66,6 +72,9 @@ public class SSHHelper extends AsyncTask {
 
     private final ConcurrentLinkedQueue<SSHCommand>
             cmdExecRequests = new ConcurrentLinkedQueue<>();
+
+    private final ConcurrentLinkedQueue<TaskCommand>
+            cmdTasksRequests = new ConcurrentLinkedQueue<>();
 
     private long timerForProgress = 0;
 
@@ -154,35 +163,12 @@ public class SSHHelper extends AsyncTask {
     }
 
     void progress(final String data) {
-        //if (timerForProgress < System.currentTimeMillis()) {
-            fragmentActivity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    for (String name : getEventsListeners().keySet()) {
-                        getEventsListeners().get(name).OnProgress(data);
-                    }
-                }
-            });
-        //    timerForProgress = System.currentTimeMillis() + 500;
-        //}
-    }
-
-/*    private void refreshDev() throws SftpException {
-        storageDevices.clear();
-        final Vector<ChannelSftp.LsEntry> lsResult = channelSftp.ls("/dev/");
-        for (ChannelSftp.LsEntry el : lsResult) {
-            final String fname = el.getFilename().toLowerCase();
-            if (fname.startsWith("mmcblk") || fname.startsWith("sd") || fname.startsWith("sr") || fname.startsWith("hd"))
-                storageDevices.add(el.getLongname());
-        }
-    }*/
-
-
-    void lsResult(final SSHLs ls) {
         fragmentActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ls.getEventListener().OnLsResult(ls);
+                for (String name : getEventsListeners().keySet()) {
+                    getEventsListeners().get(name).OnProgress(data);
+                }
             }
         });
     }
@@ -233,15 +219,6 @@ public class SSHHelper extends AsyncTask {
         return cmd;
     }
 
-    void cmdExecResult(final SSHCommand cmdData) {
-        fragmentActivity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                cmdData.getResultListener().OnCmdExecResult(cmdData);
-            }
-        });
-    }
-
     public void exec(SSHCommand cmd) {
         if (isConnectDisabled()) return;
         if (cmd.getCommand().trim().length() < 1) return;
@@ -259,20 +236,28 @@ public class SSHHelper extends AsyncTask {
     }
 
     public void backgroundCopy(BackgroundCopyTask task) {
-        final String script =
-                        "#!/bin/bash\n" +
-                        "echo \"SSH_FM_TASK_NAME " +task.getTaskName()+"\" >> /tmp/sshfm_log_"+task.getTaskName()+"\n" +
-                        "echo \"SSH_FM_TASK_FILE " +task.getFileShortName().replace('\"', '\'')+"\" >> /tmp/sshfm_log_"+task.getTaskName()+"\n" +
-                        "cp -Rv \""+task.getCopyFrom()+"\" \""+task.getCopyTo()+"\" >> /tmp/sshfm_log_"+task.getTaskName()+"\n" +
-                        "echo SSH_FM_TASK_OK >> /tmp/sshfm_log_"+task.getTaskName()+"\n" +
-                                "rm -f /tmp/sshfm_"+task.getTaskName()+".sh\n";
+        final String script = AppUtils.InputStreamToString(context.getResources().openRawResource(R.raw.bg_copy_script))
+                .replace("##COPYFROM##", task.getCopyFrom())
+                .replace("##COPYTO##", task.getCopyTo())
+                .replace("##TASKNAME##", task.getTaskName());
         final ByteArrayInputStream bais = new ByteArrayInputStream(script.getBytes());
+
+        final Gson gson = new Gson();
+        final ByteArrayInputStream baisGson = new ByteArrayInputStream(gson.toJson(task).getBytes());
+
         try {
-            channelSftp.put(bais, "/tmp/sshfm_"+task.getTaskName()+".sh");
-            channelSftp.chmod(0777, "/tmp/sshfm_"+task.getTaskName()+".sh");
+            channelSftp.mkdir("/tmp/sshfm");
+        } catch (SftpException e) {
+            if (e.id == 3) return;
+        }
+
+        try {
+            channelSftp.put(baisGson, "/tmp/sshfm/sshfm_"+task.getTaskName()+".json");
+            channelSftp.put(bais, "/tmp/sshfm/sshfm_"+task.getTaskName()+".sh");
+            channelSftp.chmod(0777, "/tmp/sshfm/sshfm_"+task.getTaskName()+".sh");
 
             final SSHCommand cpCmd = new SSHCommand(
-                    "nohup /tmp/sshfm_"+task.getTaskName()+".sh  >> /tmp/sshfm_log 2>> /tmp/sshfm_log < /dev/null &",
+                    "nohup /tmp/sshfm/sshfm_"+task.getTaskName()+".sh  >> /tmp/sshfm/sshfm_log 2>> /tmp/sshfm/sshfm_log < /dev/null &",
                     new SSHCommandEventListener() {
                         @Override
                         public void OnCmdExecResult(SSHCommand cmd) {
@@ -284,6 +269,12 @@ public class SSHHelper extends AsyncTask {
         } catch (SftpException e) {
             e.printStackTrace();
         }
+    }
+
+    public void getBgCopyTasks(TaskCommand tc) {
+        if (isConnectDisabled()) return;
+        if (tc == null) return;
+        cmdTasksRequests.add(tc);
     }
 
     @Override
@@ -400,7 +391,13 @@ public class SSHHelper extends AsyncTask {
                             destList.addAll(listFiles);
 
                             fDirName.setResult(destList);
-                            lsResult(fDirName);
+                            fragmentActivity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    fDirName.getEventListener().OnLsResult(fDirName);
+                                }
+                            });
+                            //lsResult(fDirName);
                         } catch (SftpException e) {
                             e.printStackTrace();
                             errorState(e);
@@ -411,18 +408,64 @@ public class SSHHelper extends AsyncTask {
                         final SSHCommand cmdExecText = cmdExecRequests.poll();
                         try {
                             final SSHCommand cmdExecRetVal = execCmd(cmdExecText);
-                            cmdExecResult(cmdExecRetVal);
+                            fragmentActivity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    cmdExecRetVal.getResultListener().OnCmdExecResult(cmdExecRetVal);
+                                }
+                            });
+                            //cmdExecResult(cmdExecRetVal);
                         } catch (JSchException | IOException e) {
                             e.printStackTrace();
                             errorState(e);
                         }
                     }
 
+                    if (!cmdTasksRequests.isEmpty()) {
+                        final TaskCommand tc = cmdTasksRequests.poll();
 
+                        try {
+                            channelSftp.mkdir("/tmp/sshfm");
+                        } catch (SftpException e) { }
 
+                        try {
+                            final Vector<ChannelSftp.LsEntry> lsResult = channelSftp.ls("/tmp/sshfm");
+                            final ArrayList<BackgroundCopyTask> tasks = new ArrayList<>();
+                            final Gson gson = new Gson();
 
+                            for (ChannelSftp.LsEntry item : lsResult) {
+                                try {
+                                    if (item.getAttrs().isReg() && item.getFilename().contains("sshfm_") && item.getFilename().contains(".json") && (item.getAttrs().getSize() > 0)) {
+                                        final String fileName = "/tmp/sshfm/" + item.getFilename();
+                                        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                        channelSftp.get(fileName, baos);
 
+                                        try {
+                                            final BackgroundCopyTask bgTask = gson.fromJson(baos.toString(), BackgroundCopyTask.class);
 
+                                            if (bgTask.getTaskName() != null) {
+                                                final ByteArrayOutputStream baos_log = new ByteArrayOutputStream();
+                                                channelSftp.get("/tmp/sshfm/sshfm_log_" + bgTask.getTaskName(), baos_log);
+                                                bgTask.setCompleted(baos_log.toString().contains("SSH_FM_TASK_OK"));
+                                            }
+
+                                            tasks.add(bgTask);
+                                        } catch (JsonSyntaxException e) {}
+                                    }
+                                } catch (SftpException | JsonSyntaxException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            fragmentActivity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    tc.getEventListener().OnTaskResult(tasks, tc);
+                                }
+                            });
+                        } catch (SftpException | JsonSyntaxException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 } else {
                     currSSHSess = null;
                     errorState();

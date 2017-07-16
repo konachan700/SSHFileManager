@@ -19,6 +19,5 @@
             </intent-filter>
         </activity>
         <activity android:name=".ui.activities.SSHServerDataActivity_" />
-        <activity android:name=".ui.activities.ConnectActivity_" />
     </application>
 </manifest>

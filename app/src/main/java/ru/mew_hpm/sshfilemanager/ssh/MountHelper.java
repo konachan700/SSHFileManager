@@ -43,19 +43,29 @@ public class MountHelper {
 
     public void lsMount() {
         logicalDevices.clear();
-        final SSHCommand lsblkCmd = new SSHCommand("lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT -r", new SSHCommandEventListener() {
+        final SSHCommand dfCmd = new SSHCommand("df -h", new SSHCommandEventListener() {
             @Override
-            public void OnCmdExecResult(SSHCommand cmd) {
-                final String lines[] = cmd.getCmdOut().split("\n");
-                if (lines.length < 2) return;
+            public void OnCmdExecResult(SSHCommand cmdX) {
+                final String[] linesDf = cmdX.getCmdOut().split("\n");
+                final SSHCommand lsblkCmd = new SSHCommand("lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT -r", new SSHCommandEventListener() {
+                    @Override
+                    public void OnCmdExecResult(SSHCommand cmd) {
+                        final String lines[] = cmd.getCmdOut().split("\n");
+                        if (lines.length < 2) return;
 
-                for (int i=1; i<lines.length; i++) {
-                    final MountPoint mp = new MountPoint(lines[i]);
-                    if (mp.isDisplayed()) logicalDevices.add(mp);
-                }
-                eventListener.OnLsMountComplete(logicalDevices);
+                        for (int i=1; i<lines.length; i++) {
+                            final MountPoint mp = new MountPoint(lines[i]);
+                            if (mp.isDisplayed()) {
+                                mp.setFree(linesDf);
+                                logicalDevices.add(mp);
+                            }
+                        }
+                        eventListener.OnLsMountComplete(logicalDevices);
+                    }
+                });
+                ssh.exec(lsblkCmd);
             }
         });
-        ssh.exec(lsblkCmd);
+        ssh.exec(dfCmd);
     }
 }

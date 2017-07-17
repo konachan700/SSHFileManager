@@ -26,6 +26,8 @@ public class MountPoint {
     private String folder;
     private String fstype;
     private String size;
+    private String freeBytes = "";
+    private String freePrecent = "";
     private boolean mounted;
     private boolean swap;
     private boolean empty;
@@ -55,6 +57,18 @@ public class MountPoint {
             rootDevice = true;
             for (String pattern : knownPartTypes) {
                 if (drive.matches(pattern)) rootDevice = false;
+            }
+        }
+    }
+
+    public void setFree(String[] dfOut) {
+        for (String s : dfOut) {
+            if (s.contains(drive)) {
+                final String line = s.replaceAll("\\s{2,}", " ").trim();
+                final String[] data = line.split(" ");
+                if (data.length > 3) freeBytes = data[3];
+                if (data.length > 4) freePrecent = data[4];
+                return;
             }
         }
     }
@@ -137,5 +151,21 @@ public class MountPoint {
 
     public void setRootDevice(boolean rootDevice) {
         this.rootDevice = rootDevice;
+    }
+
+    public String getFreeBytes() {
+        return freeBytes;
+    }
+
+    public void setFreeBytes(String freeBytes) {
+        this.freeBytes = freeBytes;
+    }
+
+    public String getFreePrecent() {
+        return freePrecent;
+    }
+
+    public void setFreePrecent(String freePrecent) {
+        this.freePrecent = freePrecent;
     }
 }

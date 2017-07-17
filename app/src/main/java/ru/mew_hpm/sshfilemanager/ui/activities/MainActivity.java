@@ -25,7 +25,8 @@ import ru.mew_hpm.sshfilemanager.ui.fragments.WaiterFragment_;
 
 @EActivity(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity implements FileManagerFragmentEventListener, SSHServersFragmentEventListener {
-    boolean runFirst = true;
+    boolean runFirst = true,
+            waitOn = false;
 
     private final SSHServersFragment
             sshServersSelector = new SSHServersFragment_();
@@ -112,12 +113,16 @@ public class MainActivity extends AppCompatActivity implements FileManagerFragme
 
     @Override
     public void OnWaitStart() {
+        if (waitOn) return;
+        waitOn = true;
         showWait(true);
     }
 
     @Override
     public void OnWaitEnd() {
+        if (!waitOn) return;
         showWait(false);
+        waitOn = false;
     }
 
     @Override

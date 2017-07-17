@@ -106,15 +106,18 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
     @ViewById
     FloatingActionButton floatingMenuButton;
 
-    // TODO: Add waiter for mount, tasks.
-    // TODO: Add disk capacity info in the mount page.
-    // TODO: Add remember last session folders.
+    // TODO: Add waiter for mount, tasks. - OK
+    // TODO: Add disk capacity info in the mount page. - OK
+    // TODO: Add remember last session folders. - ???
+    // TODO: Add download remote file, delete, rename
+    // TODO: Add manual mount
 
     private void refreshTasks() {
         ssh.getBgCopyTasks(new TaskCommand(new TaskCommandEventListener() {
             @Override
             public void OnTaskResult(ArrayList<BackgroundCopyTask> list, TaskCommand tc) {
                 bgCopyTasksAdapter.refresh(list);
+                actionListener.OnWaitEnd();
             }
         }));
     }
@@ -149,6 +152,7 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
             @Override
             public void onTabChanged(String s) {
                 if (currentConnectionInfo != null) {
+                    actionListener.OnWaitStart();
                     switch (s) {
                         case "tab1":
                             selectedTab = 0;
@@ -266,9 +270,11 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
                                     @Override
                                     public void OnCmdExecResult(SSHCommand cmd) {
                                         refreshTasks();
+                                        actionListener.OnWaitEnd();
                                     }
                                 });
                                 ssh.exec(cpCmd);
+                                actionListener.OnWaitStart();
                             }
                         }),
                         new MountListDialogItem("Delete all", new MountListDialogItemActionListener() {
@@ -278,9 +284,11 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
                                     @Override
                                     public void OnCmdExecResult(SSHCommand cmd) {
                                         refreshTasks();
+                                        actionListener.OnWaitEnd();
                                     }
                                 });
                                 ssh.exec(cpCmd);
+                                actionListener.OnWaitStart();
                             }
                         })
                 );
@@ -392,7 +400,7 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
 
         final AlertDialog.Builder builder2 = new AlertDialog.Builder(this.getContext());
         builder2.setTitle(fi.getShortName())
-                .setItems(new String[] {"Copy", "Cut", "Background copy", "Rename", "Delete", "Download"}, new DialogInterface.OnClickListener() {
+                .setItems(new String[] {"Copy", "Cut", "Background copy", /*"Rename", "Delete", */"Download"}, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         switch (which) {
                             case 0:
@@ -412,14 +420,11 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
                                 break;
                             case 3:
 
-                                break;
+                                break;/*
                             case 4:
 
-                                break;
+                                break;*/
                         }
-
-
-
                         dialog.dismiss();
                     }
                 });
@@ -428,10 +433,12 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
 
     @Override
     public void OnClick(RemoteFile item) {
-        if (item.getShortName() == null)
+        if (item.getShortName() == null) {
+            actionListener.OnWaitStart();
             ssh.ls(new SSHLs("../", this));
-        else {
+        } else {
             if (item.isDir()) {
+                actionListener.OnWaitStart();
                 ssh.ls(new SSHLs("./" + item.getShortName() + "/", this));
             } else {
 
@@ -442,6 +449,7 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
     @Override
     public void OnConnect(String name) {
         if (currentConnectionInfo != null) {
+            //actionListener.OnWaitStart();
             ssh.ls(new SSHLs(currentConnectionInfo.getInitDir(), this));
         }
 
@@ -487,10 +495,12 @@ public class FileManagerFragment extends Fragment implements FileManagerAdapterA
     public void OnLsResult(SSHLs ls) {
         remoteAdapter.refresh(ls.getResult());
         tabPath[selectedTab] = ssh.getCurrentDir();
+        actionListener.OnWaitEnd();
     }
 
     @Override
     public void OnLsMountComplete(ArrayList<MountPoint> out) {
+        actionListener.OnWaitEnd();
         mountPointsAdapter.refresh(out);
     }
 

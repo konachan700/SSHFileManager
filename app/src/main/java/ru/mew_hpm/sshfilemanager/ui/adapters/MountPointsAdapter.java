@@ -73,18 +73,27 @@ public class MountPointsAdapter extends BaseAdapter {
             }
         });
 
-        ((TextView) view.findViewById(R.id.itemTitle)).setText(mp.getDrive());
-        ((TextView) view.findViewById(R.id.itemSubtext)).setText(mp.getSize());
-
-        if (mp.isSwap())
-            ((TextView) view.findViewById(R.id.itemText)).setText("Swap partition");
-        else if (mp.isEmpty()) {
-            ((TextView) view.findViewById(R.id.itemText)).setText((mp.isRootDevice() ? "Disk" : "Not contain a valid FS"));
+        if (mp.isSwap()) {
+            ((TextView) view.findViewById(R.id.itemTitle)).setText(mp.getDrive());
+            ((TextView) view.findViewById(R.id.itemSubtext)).setText("swap");
+            ((TextView) view.findViewById(R.id.itemText)).setText("Total: "+mp.getSize());
+        } else if (mp.isEmpty()) {
+            ((TextView) view.findViewById(R.id.itemTitle)).setText(mp.getDrive());
+            ((TextView) view.findViewById(R.id.itemSubtext)).setText("");
+            ((TextView) view.findViewById(R.id.itemText)).setText("Total: "+mp.getSize());
+        } else if (mp.isRootDevice()) {
+            ((TextView) view.findViewById(R.id.itemTitle)).setText(mp.getDrive());
+            ((TextView) view.findViewById(R.id.itemSubtext)).setText("");
+            ((TextView) view.findViewById(R.id.itemText)).setText("Total: "+mp.getSize());
+        } else if (mp.isSystem()) {
+            ((TextView) view.findViewById(R.id.itemTitle)).setText(mp.getDrive());
+            ((TextView) view.findViewById(R.id.itemSubtext)).setText("");
+            ((TextView) view.findViewById(R.id.itemText)).setText("Total: "+mp.getSize());
         } else {
-            if (mp.isMounted())
-                ((TextView) view.findViewById(R.id.itemText)).setText("FS type: " + mp.getFstype() + "; " + (mp.isMounted() ? mp.getFolder() : "none"));
-            else
-                ((TextView) view.findViewById(R.id.itemText)).setText("FS type: " + mp.getFstype() + "; not mounted");
+            ((TextView) view.findViewById(R.id.itemTitle)).setText(mp.getDrive() +(mp.isMounted() ? "\t"+mp.getFolder(): ""));
+            ((TextView) view.findViewById(R.id.itemSubtext)).setText(mp.getFstype());
+            ((TextView) view.findViewById(R.id.itemText)).setText("Total: "+mp.getSize()+
+                    (mp.getFreeBytes().isEmpty() ? "" : "\tFree: " + mp.getFreeBytes() + " ("+mp.getFreePrecent()+")"));
         }
 
         if (!mp.isMounted()) {

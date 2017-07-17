@@ -26,8 +26,9 @@
 
 # Скриншоты
 
-![screenshot 1](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297582.png){:height="160px" width="90px"}
-![screenshot 2](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297591.png){:height="160px" width="90px"}
-![screenshot 3](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297660.png){:height="160px" width="90px"}
-![screenshot 4](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297669.png){:height="160px" width="90px"}
-![screenshot 5](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297691.png){:height="160px" width="90px"}
+<img src="https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297582.png" width="180px">
+<img src="https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297591.png" width="180px">
+<img src="https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297660.png" width="180px">
+<img src="https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297669.png" width="180px">
+<img src="https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297691.png" width="180px">
+

@@ -26,12 +26,12 @@
 
 # Скриншоты
 
-![screenshot 1](https://github.com/konachan700/JNekoImageDB/raw/master/img/Screenshot_1500297582.png)
+![screenshot 1](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297582.png)
 
-![screenshot 2](https://github.com/konachan700/JNekoImageDB/raw/master/img/Screenshot_1500297591.png)
+![screenshot 2](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297591.png)
 
-![screenshot 3](https://github.com/konachan700/JNekoImageDB/raw/master/img/Screenshot_1500297660.png)
+![screenshot 3](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297660.png)
 
-![screenshot 4](https://github.com/konachan700/JNekoImageDB/raw/master/img/Screenshot_1500297669.png)
+![screenshot 4](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297669.png)
 
-![screenshot 5](https://github.com/konachan700/JNekoImageDB/raw/master/img/Screenshot_1500297691.png)
+![screenshot 5](https://github.com/konachan700/SSHFileManager/raw/master/img/Screenshot_1500297691.png)
